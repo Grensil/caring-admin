@@ -5,21 +5,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import incar.mobile.caring.admin.di.adminModule
-import incar.mobile.caring.di.initKoin
+import incar.mobile.caring.admin.di.adminCommonModule
+import incar.mobile.caring.admin.di.jvmPlatformModule
+import org.koin.core.context.startKoin
 
 fun main() = application {
-    initKoin(
-        baseUrl = BuildConfig.BASE_URL,
-        appVersion = "1.0",
-        iamportImpKey = BuildConfig.IAMPORT_IMP_KEY,
-        iamportImpSecret = BuildConfig.IAMPORT_IMP_SECRET,
-        kicaaBaseUrl = BuildConfig.KICAA_BASE_URL,
-        extraModules = listOf(adminModule),
-    )
-
+    startKoin {
+        modules(
+            adminCommonModule(BuildConfig.BASE_URL),
+            jvmPlatformModule(),
+        )
+    }
     val state = rememberWindowState(size = DpSize(1200.dp, 800.dp))
-
     Window(
         onCloseRequest = ::exitApplication,
         title = "Caring Admin",

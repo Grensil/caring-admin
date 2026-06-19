@@ -18,4 +18,6 @@ dependencyResolutionManagement {
 include(":shared:domain")
 include(":shared:data")
 include(":shared")
+include(":admin")
 include(":desktopApp")
+include(":webApp")
