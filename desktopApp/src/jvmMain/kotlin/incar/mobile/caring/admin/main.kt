@@ -9,10 +9,11 @@ import incar.mobile.caring.di.initKoin
 
 fun main() = application {
     initKoin(
-        baseUrl = "https://caring-web-flatform.onrender.com",
+        baseUrl = BuildConfig.BASE_URL,
         appVersion = "1.0",
-        iamportImpKey = "",
-        iamportImpSecret = "",
+        iamportImpKey = BuildConfig.IAMPORT_IMP_KEY,
+        iamportImpSecret = BuildConfig.IAMPORT_IMP_SECRET,
+        kicaaBaseUrl = BuildConfig.KICAA_BASE_URL,
     )
 
     val state = rememberWindowState(size = DpSize(1200.dp, 800.dp))
