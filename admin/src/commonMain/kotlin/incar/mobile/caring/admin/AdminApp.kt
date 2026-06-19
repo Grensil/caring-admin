@@ -3,6 +3,9 @@ package incar.mobile.caring.admin
 import androidx.compose.runtime.*
 import incar.mobile.caring.admin.screen.*
 import incar.mobile.caring.admin.theme.AdminTheme
+import incar.mobile.caring.admin.viewmodel.LoginUiState
+import incar.mobile.caring.admin.viewmodel.LoginViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 sealed class AdminScreen {
     data object Login : AdminScreen()
@@ -67,16 +70,19 @@ enum class AdminMenu(val label: String, val children: List<AdminSubMenu> = empty
 @Composable
 fun AdminApp() {
     AdminTheme {
-        var screen by remember { mutableStateOf<AdminScreen>(AdminScreen.Login) }
+        val loginViewModel: LoginViewModel = koinViewModel()
+        val loginUiState by loginViewModel.uiState.collectAsState()
 
-        when (val s = screen) {
-            is AdminScreen.Login -> LoginScreen(
-                onLoginSuccess = { token -> screen = AdminScreen.Main(token) },
-            )
-            is AdminScreen.Main -> MainScreen(
-                token = s.token,
-                onLogout = { screen = AdminScreen.Login },
-            )
+        when (val s = loginUiState) {
+            is LoginUiState.Idle, is LoginUiState.Error, is LoginUiState.Loading -> {
+                LoginScreen(viewModel = loginViewModel)
+            }
+            is LoginUiState.Success -> {
+                MainScreen(
+                    token = s.token,
+                    onLogout = { loginViewModel.logout() },
+                )
+            }
         }
     }
 }

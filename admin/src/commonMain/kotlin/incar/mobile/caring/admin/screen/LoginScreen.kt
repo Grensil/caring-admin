@@ -16,20 +16,14 @@ import incar.mobile.caring.admin.viewmodel.LoginViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun LoginScreen(onLoginSuccess: (token: String) -> Unit) {
-    val viewModel: LoginViewModel = koinViewModel()
+fun LoginScreen(
+    viewModel: LoginViewModel = koinViewModel(),
+) {
     val uiState by viewModel.uiState.collectAsState()
 
     var id by remember { mutableStateOf(viewModel.savedId) }
-    var pw by remember { mutableStateOf(viewModel.savedPw) }
+    var pw by remember { mutableStateOf("") }
     var autoLogin by remember { mutableStateOf(viewModel.autoLoginEnabled) }
-
-    LaunchedEffect(uiState) {
-        if (uiState is LoginUiState.Success) {
-            onLoginSuccess((uiState as LoginUiState.Success).token)
-            viewModel.resetState()
-        }
-    }
 
     val envLabel = when (BuildConfig.ENV) {
         "release" -> "Production"
