@@ -55,23 +55,21 @@ kotlin/.../admin/
 │   ├── AdminApiService.kt          # Ktor HTTP 클라이언트 (모든 API 호출)
 │   └── dto/AdminDto.kt             # 요청/응답 DTO
 ├── model/Adjuster.kt               # 도메인 모델
-├── storage/AdminStorage.kt         # 로컬 저장소 인터페이스 (expect)
+├── storage/AdminStorage.kt         # 로컬 저장소 인터페이스
 ├── di/AdminCommonModule.kt         # Koin 공통 모듈
-├── viewmodel/                      # ViewModel 모음
+├── viewmodel/
 │   ├── LoginViewModel.kt
 │   ├── AdjusterListViewModel.kt
 │   ├── ConsultingRequestViewModel.kt
 │   └── EducationRequestViewModel.kt
-└── screen/                         # 모든 화면 (Desktop + Web 동일)
+└── screen/
     ├── LoginScreen.kt
     ├── MainScreen.kt               # 사이드바 + 콘텐츠 레이아웃
+    ├── PlaceholderScreen.kt        # 미구현 메뉴 공통 화면
     ├── AdjusterListScreen.kt       # 손해사정사 목록 / 편집
     ├── AdjusterEditDialog.kt       # 손해사정사 편집 다이얼로그
     ├── ConsultingRequestScreen.kt  # 보험금 상담 요청 내역
-    ├── EducationRequestScreen.kt   # 교육 요청 내역
-    ├── UserTypeScreen.kt           # 유저 타입 전환 (미구현)
-    ├── PushScreen.kt               # 푸시 알림 발송 (미구현)
-    └── ForceUpdateScreen.kt        # 강제 업데이트 (미구현)
+    └── EducationRequestScreen.kt   # 교육 요청 내역
 ```
 
 > **폰트 임베딩**: WASM Skia 렌더러는 CSS 폰트를 사용할 수 없어서 NotoSansKR TTF를  
@@ -126,84 +124,52 @@ BASE_URL_PROD=https://apis.car-ing.kr
 
 ---
 
-## 웹 배포
-
-WASM 앱은 정적 파일로 배포한다. 단, 브라우저가 WASM 실행 시 아래 HTTP 헤더를 요구한다.
-
-```
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
-```
-
-### nginx에 배포 (기존 서버 사용 시)
-
-```bash
-# 빌드
-./gradlew :webApp:wasmJsBrowserProductionWebpack -Penv=release
-
-# 서버에 업로드
-rsync -avz webApp/build/dist/wasmJs/productionExecutable/ user@서버:/var/www/caring-admin/
-```
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name admin.car-ing.kr;
-
-    root /var/www/caring-admin;
-    index index.html;
-
-    add_header Cross-Origin-Opener-Policy "same-origin" always;
-    add_header Cross-Origin-Embedder-Policy "require-corp" always;
-
-    types { application/wasm wasm; }
-
-    location / {
-        try_files $uri /index.html;
-    }
-}
-```
-
-### Netlify에 배포 (간단 옵션)
-
-빌드 결과물 디렉토리에 `_headers` 파일 추가:
-
-```
-/*
-  Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Embedder-Policy: require-corp
-```
-
-```bash
-netlify deploy --dir=webApp/build/dist/wasmJs/productionExecutable --prod
-```
-
-> **주의**: 웹 배포 시 API 서버도 반드시 HTTPS여야 한다. HTTP API를 호출하면 브라우저가 Mixed Content로 차단한다.
-
----
-
 ## 현재 구현 현황
 
-| 메뉴 | 기능 | 상태 |
-|------|------|------|
-| 손해사정사 관리 > 리스트 | 목록 조회 / 노출 여부 편집 / 정보 수정 | 완료 |
-| 손해사정사 관리 > 보험금 상담 요청 내역 | 전체 목록 조회 | 완료 |
-| 손해사정사 관리 > 교육 요청 내역 | 전체 목록 조회 | 완료 |
-| 유저 타입 전환 | — | 미구현 |
-| 푸시 알림 발송 | — | 미구현 |
-| 강제 업데이트 | — | 미구현 |
+### 일반 회원관리
+| 서브메뉴 | 상태 |
+|----------|------|
+| 회원 목록 | 미구현 |
+| 회원 상세 | 미구현 |
+| 제재 관리 | 미구현 |
+
+### FA(일반) 관리
+| 서브메뉴 | 상태 |
+|----------|------|
+| FA 목록 | 미구현 |
+| 가입 승인 | 미구현 |
+| 활동 내역 | 미구현 |
+
+### FA(S급) 관리
+| 서브메뉴 | 상태 |
+|----------|------|
+| S급 FA 목록 | 미구현 |
+| S급 승인 | 미구현 |
+| 활동 내역 | 미구현 |
+
+### 손해사정사 관리
+| 서브메뉴 | 기능 | 상태 |
+|----------|------|------|
+| 손해사정사 리스트 | 목록 조회 / 노출 여부 편집 / 정보 수정 | **완료** |
+| 보험금 상담 요청 내역 | 전체 목록 조회 | **완료** |
+| 교육 요청 내역 | 전체 목록 조회 | **완료** |
+
+### 카포스 점주 관리
+| 서브메뉴 | 상태 |
+|----------|------|
+| 점주 목록 | 미구현 |
+| 가맹점 관리 | 미구현 |
+| 정산 내역 | 미구현 |
 
 ---
 
 ## 앞으로 할 것
 
 ### 기능
-- [ ] 유저 타입 전환 — 일반 → FA, S급관리자 → 손해사정사 등 역할 변경
-- [ ] 푸시 알림 발송 — FCM 연동, 템플릿(이벤트/광고/사과) 기반 발송
-- [ ] 강제 업데이트 관리 — iOS/Android 최소 버전 설정 및 ON/OFF
-- [ ] 페이지네이션 — 상담/교육 요청 목록 페이지 단위 로딩
-- [ ] 상태 변경 — 상담/교육 요청 상태 직접 변경 (대기 → 수락 → 완료 등)
+- [ ] 일반 회원 / FA / S급 FA / 카포스 점주 관리 화면 구현
 - [ ] 손해사정사 신규 등록 (현재 편집만 가능)
+- [ ] 상담/교육 요청 페이지네이션
+- [ ] 상담/교육 요청 상태 변경 (대기 → 수락 → 완료 등)
 
 ### 배포 전 필수 작업
 - [ ] `caring-web-flatform` `feat/LOCAL_TEST` → `main` 머지 및 Stage/Prod 배포
@@ -215,7 +181,6 @@ netlify deploy --dir=webApp/build/dist/wasmJs/productionExecutable --prod
   ```
 
 - [ ] 토큰 만료/갱신 정책 결정 (현재 무기한)
-- [ ] 웹 정적 파일 호스팅 설정 (nginx 서브도메인 또는 Netlify)
 
 ---
 

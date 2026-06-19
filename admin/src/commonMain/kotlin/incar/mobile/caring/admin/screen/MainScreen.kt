@@ -33,9 +33,9 @@ private val HeaderBg      = Color(0xFF11111B)
 
 @Composable
 fun MainScreen(token: String, onLogout: () -> Unit) {
-    var selectedMenu    by remember { mutableStateOf(AdminMenu.ADJUSTER) }
-    var selectedSubMenu by remember { mutableStateOf<AdminSubMenu?>(AdminSubMenu.ADJUSTER_LIST) }
-    var expandedMenu    by remember { mutableStateOf<AdminMenu?>(AdminMenu.ADJUSTER) }
+    var selectedMenu    by remember { mutableStateOf<AdminMenu?>(null) }
+    var selectedSubMenu by remember { mutableStateOf<AdminSubMenu?>(null) }
+    var expandedMenu    by remember { mutableStateOf<AdminMenu?>(null) }
 
     Row(modifier = Modifier.fillMaxSize()) {
             // ── 사이드바 ──────────────────────────────────────
@@ -152,32 +152,36 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
 
             // ── 콘텐츠 영역 ───────────────────────────────────
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                val headerTitle = selectedSubMenu?.label ?: selectedMenu.label
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White)
-                        .padding(horizontal = 28.dp, vertical = 16.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Text(
-                        text = headerTitle,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
+                val headerTitle = selectedSubMenu?.label ?: selectedMenu?.label ?: ""
+                if (headerTitle.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White)
+                            .padding(horizontal = 28.dp, vertical = 16.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            text = headerTitle,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    HorizontalDivider()
                 }
-                HorizontalDivider()
 
                 when (selectedSubMenu) {
                     AdminSubMenu.ADJUSTER_LIST       -> AdjusterListScreen(token = token, onLogout = {})
                     AdminSubMenu.CONSULTING_REQUESTS -> ConsultingRequestScreen(token = token)
                     AdminSubMenu.EDUCATION_REQUESTS  -> EducationRequestScreen(token = token)
-                    null -> when (selectedMenu) {
-                        AdminMenu.USER_TYPE    -> UserTypeScreen(token)
-                        AdminMenu.PUSH         -> PushScreen(token)
-                        AdminMenu.FORCE_UPDATE -> ForceUpdateScreen(token)
-                        AdminMenu.ADJUSTER     -> AdjusterListScreen(token = token, onLogout = {})
+                    null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        if (selectedMenu == null) {
+                            Text("메뉴를 선택하세요", color = Color(0xFF6C7086))
+                        } else {
+                            PlaceholderScreen()
+                        }
                     }
+                    else -> PlaceholderScreen()
                 }
             }
         }
