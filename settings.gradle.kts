@@ -3,6 +3,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -21,3 +22,5 @@ include(":shared")
 include(":admin")
 include(":desktopApp")
 include(":webApp")
+include(":androidApp")
+include(":iosApp")
