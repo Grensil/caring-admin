@@ -1,35 +1,25 @@
 package incar.mobile.caring.admin
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import incar.mobile.caring.admin.screen.AdjusterListScreen
+import incar.mobile.caring.admin.screen.LoginScreen
+
+private sealed class AdminScreen {
+    data object Login : AdminScreen()
+    data class AdjusterList(val token: String) : AdminScreen()
+}
 
 @Composable
 fun AdminApp() {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        text = "Caring Admin",
-                        style = MaterialTheme.typography.displaySmall,
-                    )
-                    Text(
-                        text = "macOS · Windows",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
+    var screen by remember { mutableStateOf<AdminScreen>(AdminScreen.Login) }
+
+    when (val current = screen) {
+        is AdminScreen.Login -> LoginScreen(
+            onLoginSuccess = { token -> screen = AdminScreen.AdjusterList(token) },
+        )
+        is AdminScreen.AdjusterList -> AdjusterListScreen(
+            token = current.token,
+            onLogout = { screen = AdminScreen.Login },
+        )
     }
 }

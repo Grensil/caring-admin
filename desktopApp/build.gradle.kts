@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinxSerialization)
 }
 
 val localProps = Properties().apply {
@@ -74,6 +75,10 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.navigation.compose.cmp)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.cio)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
             }
         }
     }

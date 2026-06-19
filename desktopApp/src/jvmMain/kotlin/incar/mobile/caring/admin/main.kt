@@ -5,6 +5,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import incar.mobile.caring.admin.di.adminModule
 import incar.mobile.caring.di.initKoin
 
 fun main() = application {
@@ -14,6 +15,7 @@ fun main() = application {
         iamportImpKey = BuildConfig.IAMPORT_IMP_KEY,
         iamportImpSecret = BuildConfig.IAMPORT_IMP_SECRET,
         kicaaBaseUrl = BuildConfig.KICAA_BASE_URL,
+        extraModules = listOf(adminModule),
     )
 
     val state = rememberWindowState(size = DpSize(1200.dp, 800.dp))
