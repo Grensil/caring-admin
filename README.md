@@ -64,6 +64,42 @@ caring-admin/
 
 ---
 
+## 백엔드 레포
+
+Admin API는 이 레포가 아닌 별도 백엔드 레포에 있다.
+
+**레포**: [Incar-platform-promotion-office/caring-web-flatform](https://github.com/Incar-platform-promotion-office/caring-web-flatform/commits/feat/LOCAL_TEST/)  
+**브랜치**: `feat/LOCAL_TEST`
+
+Admin 관련 파일:
+- `app/Controllers/AdminController.php` — 로그인, 손해사정사 조회/수정, 상담/교육 요청 조회
+- `app/Repositories/AdjusterRepository.php` — 손해사정사 DB 조회/수정
+- `app/Repositories/ConsultingRequestRepository.php` — 상담 요청 전체 조회 (admin용)
+- `app/Repositories/EducationRequestRepository.php` — 교육 요청 전체 조회 (admin용)
+- `app/Config/Routes.php` — `/admin/*` 라우트 정의
+- `docker/local/nginx.conf` — 로컬 Docker용 CORS 설정
+
+> **현재 이 브랜치는 main에 머지되지 않았다.** Stage/Prod 배포 전에 머지 및 환경별 검증 필요.
+
+### 로컬 DB 현황
+
+어드민 계정 및 테스트 데이터는 **개발자 로컬 환경(Docker)에만 존재**한다.  
+다른 개발자가 Dev 환경에서 실행하려면 로컬 DB를 직접 세팅해야 한다.
+
+**로컬 서버 실행 방법** (caring-web-flatform 레포 참고):
+```bash
+# caring-web-flatform 디렉토리에서
+docker compose -f docker/local/docker-compose.yml up -d
+```
+
+**어드민 계정 수동 INSERT** (로컬 DB 접속 후):
+```sql
+INSERT INTO admin_users (login_id, password, name, created_at)
+VALUES ('원하는ID', SHA2('비밀번호', 256), '관리자', NOW());
+```
+
+---
+
 ## 환경 설정
 
 ### local.properties (git에 포함되지 않음, 직접 작성)
@@ -111,27 +147,23 @@ BASE_URL_PROD=https://apis.car-ing.kr
 
 ---
 
-## 어드민 계정 관련
+## Stage / Prod 배포 전 필수 작업
 
-현재 어드민 계정은 **로컬 DB에만 존재**한다. 운영 서버(stage/prod)에서 로그인하려면 다음 작업이 필요하다.
+현재 어드민 계정 및 Admin API는 **로컬 환경에만 존재**한다. Stage/Prod에서 동작하려면 아래 작업이 모두 필요하다.
 
-### 해야 할 작업
+1. **`feat/LOCAL_TEST` 브랜치를 `main`에 머지**  
+   → [caring-web-flatform PR 생성](https://github.com/Incar-platform-promotion-office/caring-web-flatform/compare/main...feat/LOCAL_TEST)
 
-1. **Stage / Prod DB에 admin 계정 INSERT**
+2. **Stage / Prod DB에 admin 계정 INSERT**
 
    ```sql
-   -- caring-web-flatform DB에서 실행
    INSERT INTO admin_users (login_id, password, name, created_at)
-   VALUES ('admin', SHA2('비밀번호', 256), '관리자', NOW());
+   VALUES ('원하는ID', SHA2('비밀번호', 256), '관리자', NOW());
    ```
-   > 테이블 구조는 `caring-web-flatform/database/migrations/` 또는 실제 스키마 확인 필요.
 
-2. **Admin 토큰 발급 방식 결정**  
-   현재는 로그인 시 서버가 토큰을 내려주고, 이후 요청마다 `X-Admin-Token` 헤더로 전달하는 방식.  
-   Stage/Prod 배포 전에 토큰 만료 정책 및 보안 강화 필요.
-
-3. **`caring-web-flatform`의 AdminController를 Stage/Prod 환경에 배포**  
-   현재 `feat/LOCAL_TEST` 브랜치에 있음 → main 머지 후 배포 필요.
+3. **Admin 토큰 보안 강화**  
+   현재는 로그인 시 발급된 토큰을 `X-Admin-Token` 헤더로 매 요청마다 전달하는 방식.  
+   토큰 만료 시간 및 갱신 정책 미구현 상태 → 배포 전 결정 필요.
 
 ---
 
