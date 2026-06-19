@@ -186,17 +186,43 @@ BASE_URL_PROD=https://apis.car-ing.kr
 
 ---
 
-## 어드민 계정 현황
+## 어드민 계정 관리
 
-어드민 계정은 DB 테이블이 아닌 **`.env` 환경변수**로 관리한다.  
-로컬 `.env dev` 파일에 `ADMIN_LOGIN_ID` / `ADMIN_LOGIN_PW`가 설정되어 있어서 로그인이 가능한 것.
+### 현재 방식 (로컬/Dev) — `.env` 환경변수
+
+단일 계정을 `.env`에 하드코딩하는 방식. 로컬 개발용으로만 사용한다.
+
+```
+# caring-web-flatform/.env dev
+ADMIN_LOGIN_ID = caring-admin
+ADMIN_LOGIN_PW = 비밀번호
+```
 
 ```bash
-# caring-web-flatform 디렉토리에서 로컬 서버 실행
+# 로컬 서버 실행
 docker compose -f docker/local/docker-compose.yml up -d
 ```
 
-로그인 계정은 `caring-web-flatform/.env dev` 파일 참고 (git에 포함되어 있지 않음).
+### Stage / Prod 방식 — DB 테이블
+
+`.env` 방식은 계정이 하나뿐이고, 비밀번호 변경 시 재배포가 필요하며, 로그인 이력을 남길 수 없다.  
+Stage/Prod에서는 `admin_users` DB 테이블로 관리한다.
+
+**변경 내용** (`caring-web-flatform`):
+- `admin_users` 테이블 마이그레이션 추가
+- `AdminController::login()` — `.env` 비교 → DB 조회 + bcrypt 검증으로 변경
+- Seeder로 초기 계정 생성
+
+**초기 계정 생성** (마이그레이션 실행 후):
+```bash
+php spark db:seed AdminUserSeeder
+```
+
+**추가 계정은 DB에 직접 INSERT**:
+```sql
+INSERT INTO admin_users (login_id, password_hash, name)
+VALUES ('새계정', '$2y$...bcrypt해시...', '담당자명');
+```
 
 ---
 
