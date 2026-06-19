@@ -1,10 +1,13 @@
 package incar.mobile.caring.admin.model
 
 data class Adjuster(
-    val userIdx: String,
+    val id: Int,
     val name: String,
+    val company: String,
     val phone: String,
-    val isLive: Boolean,
-    val joinedAt: String,
-    val officeName: String,
+    val address: String,
+    val careerYears: Int,
+    val reviewScore: Double?,
+    val reviewCount: Int,
+    val isVisible: Boolean,
 )

@@ -5,6 +5,7 @@ import incar.mobile.caring.admin.data.dto.AdjusterListResponseDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.Parameters
@@ -23,11 +24,11 @@ class AdminApiService(
             }))
         }.body()
 
-    suspend fun getAdjusters(token: String): AdjusterListResponseDto =
-        httpClient.post("$baseUrl/admin/adjusters") {
-            setBody(FormDataContent(Parameters.build {
-                append("token", token)
-                append("v", appVersion)
-            }))
+    suspend fun getAdjusters(page: Int = 1, size: Int = 50): AdjusterListResponseDto =
+        httpClient.get("$baseUrl/api/adjusters") {
+            url {
+                parameters.append("page", page.toString())
+                parameters.append("size", size.toString())
+            }
         }.body()
 }

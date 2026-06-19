@@ -14,15 +14,29 @@ data class AdminLoginResponseDto(
 data class AdjusterListResponseDto(
     val result: String,
     @SerialName("error_message") val errorMessage: String? = null,
-    @SerialName("adjuster_list") val adjusterList: List<AdjusterDto> = emptyList(),
+    val adjusters: List<AdjusterDto> = emptyList(),
+    val pagination: PaginationDto? = null,
+)
+
+@Serializable
+data class PaginationDto(
+    val total: Int = 0,
+    val page: Int = 1,
+    val size: Int = 20,
+    @SerialName("has_next") val hasNext: Boolean = false,
 )
 
 @Serializable
 data class AdjusterDto(
-    @SerialName("user_idx") val userIdx: String,
-    @SerialName("user_name") val userName: String,
-    @SerialName("user_phone") val userPhone: String,
-    @SerialName("is_live") val isLive: Boolean = false,
-    @SerialName("joined_at") val joinedAt: String = "",
-    @SerialName("office_name") val officeName: String = "",
+    val id: Int = 0,
+    val name: String = "",
+    val company: String = "",
+    val phone: String = "",
+    @SerialName("office_phone") val officePhone: String? = null,
+    val address: String = "",
+    @SerialName("career_years") val careerYears: Int = 0,
+    val email: String = "",
+    @SerialName("is_visible") val isVisible: Boolean = true,
+    @SerialName("review_score") val reviewScore: Double? = null,
+    @SerialName("review_count") val reviewCount: Int = 0,
 )

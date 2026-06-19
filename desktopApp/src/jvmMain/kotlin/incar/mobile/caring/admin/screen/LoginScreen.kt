@@ -16,7 +16,7 @@ import incar.mobile.caring.admin.viewmodel.LoginViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun LoginScreen(onLoginSuccess: (token: String) -> Unit) {
+fun LoginScreen(onLoginSuccess: () -> Unit) {
     val viewModel: LoginViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
@@ -25,7 +25,7 @@ fun LoginScreen(onLoginSuccess: (token: String) -> Unit) {
 
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.Success) {
-            onLoginSuccess((uiState as LoginUiState.Success).token)
+            onLoginSuccess()
             viewModel.resetState()
         }
     }

@@ -6,19 +6,18 @@ import incar.mobile.caring.admin.screen.LoginScreen
 
 private sealed class AdminScreen {
     data object Login : AdminScreen()
-    data class AdjusterList(val token: String) : AdminScreen()
+    data object AdjusterList : AdminScreen()
 }
 
 @Composable
 fun AdminApp() {
     var screen by remember { mutableStateOf<AdminScreen>(AdminScreen.Login) }
 
-    when (val current = screen) {
+    when (screen) {
         is AdminScreen.Login -> LoginScreen(
-            onLoginSuccess = { token -> screen = AdminScreen.AdjusterList(token) },
+            onLoginSuccess = { screen = AdminScreen.AdjusterList },
         )
         is AdminScreen.AdjusterList -> AdjusterListScreen(
-            token = current.token,
             onLogout = { screen = AdminScreen.Login },
         )
     }

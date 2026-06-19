@@ -21,20 +21,23 @@ class AdjusterListViewModel(
     private val _uiState = MutableStateFlow<AdjusterListUiState>(AdjusterListUiState.Loading)
     val uiState: StateFlow<AdjusterListUiState> = _uiState
 
-    fun load(token: String) {
+    fun load() {
         viewModelScope.launch {
             _uiState.value = AdjusterListUiState.Loading
-            runCatching { adminApiService.getAdjusters(token) }
+            runCatching { adminApiService.getAdjusters() }
                 .onSuccess { dto ->
-                    if (dto.result == "ok") {
-                        val adjusters = dto.adjusterList.map { adj ->
+                    if (dto.result == "success") {
+                        val adjusters = dto.adjusters.map { adj ->
                             Adjuster(
-                                userIdx = adj.userIdx,
-                                name = adj.userName,
-                                phone = adj.userPhone,
-                                isLive = adj.isLive,
-                                joinedAt = adj.joinedAt,
-                                officeName = adj.officeName,
+                                id = adj.id,
+                                name = adj.name,
+                                company = adj.company,
+                                phone = adj.phone,
+                                address = adj.address,
+                                careerYears = adj.careerYears,
+                                reviewScore = adj.reviewScore,
+                                reviewCount = adj.reviewCount,
+                                isVisible = adj.isVisible,
                             )
                         }
                         _uiState.value = AdjusterListUiState.Success(adjusters)
@@ -48,5 +51,5 @@ class AdjusterListViewModel(
         }
     }
 
-    fun refresh(token: String) = load(token)
+    fun refresh() = load()
 }

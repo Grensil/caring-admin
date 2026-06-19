@@ -17,20 +17,18 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun AdjusterListScreen(
-    token: String,
     onLogout: () -> Unit,
 ) {
     val viewModel: AdjusterListViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(token) {
-        viewModel.load(token)
+    LaunchedEffect(Unit) {
+        viewModel.load()
     }
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Top bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -45,7 +43,7 @@ fun AdjusterListScreen(
                         modifier = Modifier.weight(1f),
                     )
                     if (uiState is AdjusterListUiState.Success) {
-                        IconButton(onClick = { viewModel.refresh(token) }) {
+                        IconButton(onClick = { viewModel.refresh() }) {
                             Text("↻", style = MaterialTheme.typography.titleMedium)
                         }
                     }
@@ -61,29 +59,22 @@ fun AdjusterListScreen(
                             CircularProgressIndicator()
                         }
                     }
-
                     is AdjusterListUiState.Error -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = state.message,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
+                                Text(state.message, color = MaterialTheme.colorScheme.error)
                                 Spacer(modifier = Modifier.height(12.dp))
-                                Button(onClick = { viewModel.refresh(token) }) {
-                                    Text("다시 시도")
-                                }
+                                Button(onClick = { viewModel.refresh() }) { Text("다시 시도") }
                             }
                         }
                     }
-
                     is AdjusterListUiState.Success -> {
                         if (state.adjusters.isEmpty()) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Text("등록된 손해사정사가 없습니다.")
                             }
                         } else {
-                            AdjusterTable(adjusters = state.adjusters)
+                            AdjusterTable(state.adjusters)
                         }
                     }
                 }
@@ -101,23 +92,21 @@ private fun AdjusterTable(adjusters: List<Adjuster>) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp),
         )
-
-        // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            TableCell("이름", weight = 1.5f, header = true)
-            TableCell("연락처", weight = 2f, header = true)
-            TableCell("사무소", weight = 2f, header = true)
-            TableCell("가입일", weight = 2f, header = true)
-            TableCell("활성", weight = 1f, header = true)
+            TableCell("이름",   weight = 1.5f, header = true)
+            TableCell("소속",   weight = 2f,   header = true)
+            TableCell("연락처", weight = 2f,   header = true)
+            TableCell("주소",   weight = 3f,   header = true)
+            TableCell("경력",   weight = 1f,   header = true)
+            TableCell("평점",   weight = 1f,   header = true)
+            TableCell("노출",   weight = 1f,   header = true)
         }
-
         HorizontalDivider()
-
         LazyColumn {
             items(adjusters) { adjuster ->
                 AdjusterRow(adjuster)
@@ -135,18 +124,20 @@ private fun AdjusterRow(adjuster: Adjuster) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TableCell(adjuster.name, weight = 1.5f)
-        TableCell(adjuster.phone, weight = 2f)
-        TableCell(adjuster.officeName.ifBlank { "-" }, weight = 2f)
-        TableCell(adjuster.joinedAt.ifBlank { "-" }, weight = 2f)
+        TableCell(adjuster.name,                              weight = 1.5f)
+        TableCell(adjuster.company.ifBlank { "-" },           weight = 2f)
+        TableCell(adjuster.phone,                             weight = 2f)
+        TableCell(adjuster.address.ifBlank { "-" },           weight = 3f)
+        TableCell("${adjuster.careerYears}년",                weight = 1f)
+        TableCell(adjuster.reviewScore?.let { "%.1f".format(it) } ?: "-", weight = 1f)
         Box(modifier = Modifier.weight(1f)) {
             Badge(
-                containerColor = if (adjuster.isLive)
+                containerColor = if (adjuster.isVisible)
                     MaterialTheme.colorScheme.primaryContainer
                 else
                     MaterialTheme.colorScheme.errorContainer,
             ) {
-                Text(if (adjuster.isLive) "활성" else "비활성")
+                Text(if (adjuster.isVisible) "노출" else "숨김")
             }
         }
     }

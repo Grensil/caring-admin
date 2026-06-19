@@ -30,7 +30,7 @@ class LoginViewModel(
             _uiState.value = LoginUiState.Loading
             runCatching { adminApiService.login(id, pw) }
                 .onSuccess { dto ->
-                    if (dto.result == "ok" && dto.token != null) {
+                    if (dto.result == "success" && dto.token != null) {
                         _uiState.value = LoginUiState.Success(dto.token)
                     } else {
                         _uiState.value = LoginUiState.Error(dto.errorMessage ?: "로그인 실패")
