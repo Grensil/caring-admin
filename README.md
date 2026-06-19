@@ -173,12 +173,14 @@ BASE_URL_PROD=https://apis.car-ing.kr
 
 ### 배포 전 필수 작업
 - [ ] `caring-web-flatform` `feat/LOCAL_TEST` → `main` 머지 및 Stage/Prod 배포
-- [ ] Stage / Prod DB에 admin 계정 INSERT
+- [ ] Stage / Prod 서버 `.env`에 어드민 계정 추가
 
-  ```sql
-  INSERT INTO admin_users (login_id, password, name, created_at)
-  VALUES ('원하는ID', SHA2('비밀번호', 256), '관리자', NOW());
   ```
+  ADMIN_LOGIN_ID = {원하는ID}
+  ADMIN_LOGIN_PW = {원하는비밀번호}
+  ```
+
+  > 어드민 계정은 DB 테이블이 아닌 `.env` 환경변수로 관리된다. (단일 계정)
 
 - [ ] 토큰 만료/갱신 정책 결정 (현재 무기한)
 
@@ -186,13 +188,15 @@ BASE_URL_PROD=https://apis.car-ing.kr
 
 ## 어드민 계정 현황
 
-현재 어드민 계정과 테스트 데이터는 **개발자 로컬 환경(Docker)에만 존재**한다.  
-새 환경에서 실행하려면 백엔드 Docker를 띄우고 계정을 수동으로 INSERT해야 한다.
+어드민 계정은 DB 테이블이 아닌 **`.env` 환경변수**로 관리한다.  
+로컬 `.env dev` 파일에 `ADMIN_LOGIN_ID` / `ADMIN_LOGIN_PW`가 설정되어 있어서 로그인이 가능한 것.
 
 ```bash
 # caring-web-flatform 디렉토리에서 로컬 서버 실행
 docker compose -f docker/local/docker-compose.yml up -d
 ```
+
+로그인 계정은 `caring-web-flatform/.env dev` 파일 참고 (git에 포함되어 있지 않음).
 
 ---
 
