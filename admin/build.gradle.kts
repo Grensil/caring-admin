@@ -119,6 +119,8 @@ kotlin {
             dependencies {
                 implementation(libs.ktor.client.android)
                 implementation(libs.koin.android)
+                // Add ui-tooling for Android Previews in Android Studio
+                implementation("org.jetbrains.compose.ui:ui-tooling:1.10.2")
             }
         }
     }

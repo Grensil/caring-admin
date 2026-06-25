@@ -202,7 +202,7 @@ private fun AdjusterTable(
 ) {
     val visibleCols = columnOrder.filter { it in visibleColumns }
     val hScroll     = rememberScrollState()
-    val editW       = 80.dp
+    val editW       = 40.dp
     val density     = LocalDensity.current
 
     // 드래그 상태
@@ -302,7 +302,7 @@ private fun AdjusterTable(
             }
 
             // 편집 컬럼 자리 확보
-            //Spacer(Modifier.width(editW))
+            Spacer(Modifier.width(editW))
 
             // ── 필터 버튼 ──
             Box {
@@ -467,7 +467,6 @@ internal fun AdminSearchBar(
             unfocusedBorderColor = Color.Transparent,
         ),
         modifier  = modifier
-            .height(44.dp)
             .onFocusChanged { isFocused = it.isFocused }
             .border(
                 width = if (isFocused) 2.dp else 1.5.dp,
