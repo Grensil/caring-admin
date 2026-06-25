@@ -1,6 +1,7 @@
 package incar.mobile.caring.admin.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
@@ -17,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -299,7 +302,7 @@ private fun AdjusterTable(
             }
 
             // 편집 컬럼 자리 확보
-            Spacer(Modifier.width(editW))
+            //Spacer(Modifier.width(editW))
 
             // ── 필터 버튼 ──
             Box {
@@ -427,6 +430,10 @@ internal fun AdminSearchBar(
     placeholder: String = "검색",
     modifier: Modifier = Modifier,
 ) {
+    var isFocused by remember { mutableStateOf(false) }
+    val primary   = MaterialTheme.colorScheme.primary
+    val outline   = MaterialTheme.colorScheme.outline
+
     OutlinedTextField(
         value         = query,
         onValueChange = onQueryChange,
@@ -445,7 +452,7 @@ internal fun AdminSearchBar(
                 Icons.Default.Search,
                 contentDescription = null,
                 modifier           = Modifier.size(18.dp),
-                tint               = MaterialTheme.colorScheme.primary,
+                tint               = if (isFocused) primary else outline,
             )
         },
         trailingIcon = if (query.isNotEmpty()) ({
@@ -454,11 +461,19 @@ internal fun AdminSearchBar(
             }
         }) else null,
         shape  = RoundedCornerShape(24.dp),
+        // 내부 border는 숨기고 외부 Modifier.border로 직접 그림 (두께 제어)
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor   = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedBorderColor   = Color.Transparent,
+            unfocusedBorderColor = Color.Transparent,
         ),
-        modifier  = modifier.height(44.dp),
+        modifier  = modifier
+            .height(44.dp)
+            .onFocusChanged { isFocused = it.isFocused }
+            .border(
+                width = if (isFocused) 2.dp else 1.5.dp,
+                color = if (isFocused) primary else outline.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(24.dp),
+            ),
         textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
     )
 }
