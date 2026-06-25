@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import incar.mobile.caring.admin.AdminMenu
 import incar.mobile.caring.admin.AdminSubMenu
+import incar.mobile.caring.admin.model.Adjuster
 import incar.mobile.caring.admin.storage.AdminStorage
 import kotlin.math.roundToInt
 import org.koin.compose.koinInject
@@ -217,6 +218,10 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
     var selectedMenu    by remember { mutableStateOf<AdminMenu?>(null) }
     var selectedSubMenu by remember { mutableStateOf<AdminSubMenu?>(null) }
     var expandedMenu    by remember { mutableStateOf<AdminMenu?>(null) }
+    var detailAdjuster  by remember { mutableStateOf<Adjuster?>(null) }
+
+    // 서브메뉴 이동 시 adjuster 상세 초기화
+    LaunchedEffect(selectedSubMenu) { detailAdjuster = null }
     var isCompact       by remember { mutableStateOf(storage.read(KEY_IS_COMPACT) == "true") }
     var menuOrder       by remember { mutableStateOf(loadMenuOrder(storage)) }
     var draggingMenu    by remember { mutableStateOf<AdminMenu?>(null) }
@@ -610,6 +615,16 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
                     Text(
                         text       = selectedSubMenu!!.label,
                         style      = MaterialTheme.typography.titleLarge,
+                        fontWeight = if (detailAdjuster == null) FontWeight.Bold else FontWeight.Normal,
+                        color      = if (detailAdjuster == null) Color(0xFF1A1A2E) else Color(0xFF6C7086),
+                        modifier   = if (detailAdjuster != null) Modifier.clickable { detailAdjuster = null } else Modifier,
+                    )
+                }
+                if (detailAdjuster != null) {
+                    Text("  >  ", color = Color(0xFF6C7086), fontSize = 18.sp)
+                    Text(
+                        text       = detailAdjuster!!.name,
+                        style      = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color      = Color(0xFF1A1A2E),
                     )
@@ -617,10 +632,16 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
             }
             HorizontalDivider()
 
+            // adjuster 상세 화면 (브레드크럼에서 뒤로가기)
+            if (detailAdjuster != null) {
+                AdjusterDetailScreen(adjuster = detailAdjuster!!, token = token)
+                return@Column
+            }
+
             when (selectedSubMenu) {
-                AdminSubMenu.ADJUSTER_LIST       -> AdjusterListScreen(token = token, onLogout = {})
-                AdminSubMenu.CONSULTING_REQUESTS -> ConsultingRequestScreen(token = token)
-                AdminSubMenu.EDUCATION_REQUESTS  -> EducationRequestScreen(token = token)
+                AdminSubMenu.ADJUSTER_LIST       -> AdjusterListScreen(token = token, onLogout = {}, onAdjusterSelect = { detailAdjuster = it })
+                AdminSubMenu.CONSULTING_REQUESTS -> ConsultingRequestScreen(token = token, onAdjusterSelect = { detailAdjuster = it })
+                AdminSubMenu.EDUCATION_REQUESTS  -> EducationRequestScreen(token = token, onAdjusterSelect = { detailAdjuster = it })
                 null -> {
                     val menu = selectedMenu
                     when {

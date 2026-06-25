@@ -104,6 +104,7 @@ kotlin {
             dependencies {
                 implementation(libs.ktor.client.cio)
                 implementation(libs.kotlinx.coroutines.swing)
+                implementation("org.jetbrains.compose.ui:ui-tooling:1.10.2")
             }
         }
         wasmJsMain {

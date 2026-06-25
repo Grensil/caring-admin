@@ -7,16 +7,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import incar.mobile.caring.admin.data.dto.EducationRequestDto
+import incar.mobile.caring.admin.model.Adjuster
 import incar.mobile.caring.admin.viewmodel.AdjusterListUiState
 import incar.mobile.caring.admin.viewmodel.AdjusterListViewModel
 import incar.mobile.caring.admin.viewmodel.EducationRequestUiState
@@ -24,71 +24,63 @@ import incar.mobile.caring.admin.viewmodel.EducationRequestViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun EducationRequestScreen(token: String) {
+fun EducationRequestScreen(
+    token: String,
+    onAdjusterSelect: (Adjuster) -> Unit = {},
+) {
     val viewModel: EducationRequestViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
     val adjusterVm: AdjusterListViewModel = koinViewModel()
     val adjusterState by adjusterVm.uiState.collectAsState()
 
-    var selectedAdjuster by remember { mutableStateOf<incar.mobile.caring.admin.model.Adjuster?>(null) }
-    var inputQuery by remember { mutableStateOf("") }
-    var activeQuery by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.load(token)
         if (adjusterState is AdjusterListUiState.Loading) adjusterVm.load(token)
     }
 
-    if (selectedAdjuster != null) {
-        AdjusterDetailScreen(
-            adjuster = selectedAdjuster!!,
-            token = token,
-            onBack = { selectedAdjuster = null },
-        )
-        return
-    }
-
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 검색바
-            AdjusterSearchBar(
-                inputQuery = inputQuery,
-                onInputChange = { inputQuery = it },
-                onSearch = { activeQuery = inputQuery },
-                onClear = { inputQuery = ""; activeQuery = "" },
-                placeholder = "손해사정사 이름, 연락처, 업체명으로 검색",
-            )
-
+            // ── 툴바 ──
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val count = (uiState as? EducationRequestUiState.Success)?.let { state ->
-                    if (activeQuery.isBlank()) state.total
-                    else state.items.count {
-                        (it.adjusterNameFull ?: it.adjusterNameSnapshot ?: "").contains(activeQuery, ignoreCase = true)
-                    }
-                }
-                Text(
-                    text = if (count != null) "총 ${count}건" else "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
+                AdminSearchBar(
+                    query         = query,
+                    onQueryChange = { query = it },
+                    placeholder   = "손해사정사 이름으로 검색",
+                    modifier      = Modifier.widthIn(min = 200.dp, max = 400.dp),
                 )
-                IconButton(onClick = { viewModel.refresh(token) }) {
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { viewModel.refresh(token) }, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                 }
+            }
+
+            // ── 건수 ──
+            val count = (uiState as? EducationRequestUiState.Success)?.let { state ->
+                if (query.isBlank()) state.total
+                else state.items.count { filterEducation(it, query) }
+            }
+            if (count != null) {
+                Text(
+                    text     = "총 ${count}건",
+                    modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 8.dp),
+                    style    = MaterialTheme.typography.bodyMedium,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             HorizontalDivider()
 
             when (val state = uiState) {
                 is EducationRequestUiState.Loading ->
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 is EducationRequestUiState.Error ->
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -98,10 +90,8 @@ fun EducationRequestScreen(token: String) {
                         }
                     }
                 is EducationRequestUiState.Success -> {
-                    val filtered = if (activeQuery.isBlank()) state.items
-                    else state.items.filter {
-                        (it.adjusterNameFull ?: it.adjusterNameSnapshot ?: "").contains(activeQuery, ignoreCase = true)
-                    }
+                    val filtered = if (query.isBlank()) state.items
+                    else state.items.filter { filterEducation(it, query) }
                     if (filtered.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("교육 요청 내역이 없습니다.")
@@ -112,7 +102,7 @@ fun EducationRequestScreen(token: String) {
                             onRowClick = { adjusterId ->
                                 val adjuster = (adjusterState as? AdjusterListUiState.Success)
                                     ?.adjusters?.firstOrNull { it.id == adjusterId }
-                                if (adjuster != null) selectedAdjuster = adjuster
+                                if (adjuster != null) onAdjusterSelect(adjuster)
                             },
                         )
                     }
@@ -121,6 +111,9 @@ fun EducationRequestScreen(token: String) {
         }
     }
 }
+
+private fun filterEducation(item: EducationRequestDto, query: String): Boolean =
+    (item.adjusterNameFull ?: item.adjusterNameSnapshot ?: "").contains(query, ignoreCase = true)
 
 @Composable
 private fun EducationRequestTable(
@@ -131,17 +124,17 @@ private fun EducationRequestTable(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFFEEF2FF))
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            ERCell("ID",        weight = 0.5f, header = true)
-            ERCell("요청자",    weight = 1.5f, header = true)
-            ERCell("연락처",    weight = 1.5f, header = true)
-            ERCell("손해사정사", weight = 1.5f, header = true)
-            ERCell("기관명",    weight = 1.5f, header = true)
-            ERCell("교육분야",  weight = 1.5f, header = true)
-            ERCell("희망일",    weight = 1.2f, header = true)
-            ERCell("상태",      weight = 1f,   header = true)
+            ERCell("ID",         0.5f, header = true)
+            ERCell("요청자",     1.5f, header = true)
+            ERCell("연락처",     1.5f, header = true)
+            ERCell("손해사정사", 1.5f, header = true)
+            ERCell("기관명",     1.5f, header = true)
+            ERCell("교육분야",   1.5f, header = true)
+            ERCell("희망일",     1.2f, header = true)
+            ERCell("상태",       1f,   header = true)
         }
         HorizontalDivider()
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -153,16 +146,14 @@ private fun EducationRequestTable(
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ERCell(item.id.toString(),                                          weight = 0.5f)
-                    ERCell(item.requesterName ?: "-",                                   weight = 1.5f)
-                    ERCell(item.requesterPhone ?: "-",                                  weight = 1.5f)
-                    ERCell(item.adjusterNameFull ?: item.adjusterNameSnapshot ?: "-",   weight = 1.5f)
-                    ERCell(item.orgName ?: "-",                                         weight = 1.5f)
-                    ERCell(item.field ?: "-",                                           weight = 1.5f)
-                    ERCell(item.desiredDate?.take(10) ?: "-",                           weight = 1.2f)
-                    Box(modifier = Modifier.weight(1f)) {
-                        StatusBadge(item.status)
-                    }
+                    ERCell(item.id.toString(),                                         0.5f)
+                    ERCell(item.requesterName ?: "-",                                  1.5f)
+                    ERCell(item.requesterPhone ?: "-",                                 1.5f)
+                    ERCell(item.adjusterNameFull ?: item.adjusterNameSnapshot ?: "-",  1.5f)
+                    ERCell(item.orgName ?: "-",                                        1.5f)
+                    ERCell(item.field ?: "-",                                          1.5f)
+                    ERCell(item.desiredDate?.take(10) ?: "-",                          1.2f)
+                    Box(modifier = Modifier.weight(1f)) { StatusBadge(item.status) }
                 }
                 HorizontalDivider(thickness = 0.5.dp)
             }
@@ -173,9 +164,12 @@ private fun EducationRequestTable(
 @Composable
 private fun RowScope.ERCell(text: String, weight: Float, header: Boolean = false) {
     Text(
-        text = text,
-        modifier = Modifier.weight(weight),
-        fontSize = if (header) 15.sp else 14.sp,
-        fontWeight = if (header) FontWeight.Bold else FontWeight.Normal,
+        text       = text,
+        modifier   = Modifier.weight(weight),
+        fontSize   = if (header) 13.sp else 14.sp,
+        fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal,
+        color      = if (header) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+        maxLines   = 1,
+        overflow   = TextOverflow.Ellipsis,
     )
 }

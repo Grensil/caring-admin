@@ -3,11 +3,10 @@ package incar.mobile.caring.admin.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import incar.mobile.caring.admin.model.Adjuster
+import incar.mobile.caring.admin.theme.AdminColors
 import incar.mobile.caring.admin.viewmodel.ConsultingRequestUiState
 import incar.mobile.caring.admin.viewmodel.ConsultingRequestViewModel
 import incar.mobile.caring.admin.viewmodel.EducationRequestUiState
@@ -29,12 +29,10 @@ private fun Double.toFixed1(): String {
     return "${v / 10}.${v % 10}"
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdjusterDetailScreen(
     adjuster: Adjuster,
     token: String,
-    onBack: () -> Unit,
 ) {
     val consultingVm: ConsultingRequestViewModel = koinViewModel()
     val educationVm: EducationRequestViewModel = koinViewModel()
@@ -51,264 +49,181 @@ fun AdjusterDetailScreen(
         is ConsultingRequestUiState.Success -> s.items.filter { it.adjusterId == adjuster.id }
         else -> emptyList()
     }
-
     val educationItems = when (val s = educationState) {
         is EducationRequestUiState.Success -> s.items.filter { it.adjusterId == adjuster.id }
         else -> emptyList()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(adjuster.name, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
-                    }
-                },
-            )
-        },
-        modifier = Modifier.fillMaxSize(),
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF8F9FA))
-                .padding(innerPadding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentPadding = PaddingValues(horizontal = 32.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        // 기본 정보
+        item {
+            DetailCard(icon = Icons.Default.Person, title = "기본 정보") {
+                BasicInfoList(adjuster)
+            }
+        }
+
+        // 전문 분야
+        if (adjuster.regions.isNotEmpty() || adjuster.fields.isNotEmpty() ||
+            adjuster.consultingFields.isNotEmpty() || adjuster.qualifications.isNotEmpty() ||
+            !adjuster.mainCareer.isNullOrBlank()
         ) {
-            // 기본 정보 섹션
             item {
-                DetailSectionCard(
-                    icon = Icons.Default.Person,
-                    title = "기본 정보",
-                ) {
-                    BasicInfoGrid(adjuster)
-                }
-            }
-
-            // 전문 분야 섹션
-            item {
-                DetailSectionCard(
-                    icon = Icons.Default.Star,
-                    title = "전문 분야",
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ChipRow(label = "활동 지역", items = adjuster.regions)
-                        ChipRow(label = "전문 분야", items = adjuster.fields)
-                        ChipRow(label = "보험금 상담 분야", items = adjuster.consultingFields)
-                        ChipRow(label = "자격증", items = adjuster.qualifications)
+                DetailCard(icon = Icons.Default.Star, title = "전문 분야") {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        ChipSection(label = "활동 지역", items = adjuster.regions)
+                        ChipSection(label = "전문 분야", items = adjuster.fields)
+                        ChipSection(label = "보험금 상담 분야", items = adjuster.consultingFields)
+                        ChipSection(label = "자격증", items = adjuster.qualifications)
                         if (!adjuster.mainCareer.isNullOrBlank()) {
-                            Column {
-                                Text(
-                                    "주요 경력",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF757575),
-                                    fontWeight = FontWeight.Medium,
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(adjuster.mainCareer, fontSize = 14.sp)
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                SectionLabel("주요 경력")
+                                Text(adjuster.mainCareer, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
                 }
             }
+        }
 
-            // 평점 섹션
-            item {
-                DetailSectionCard(
-                    icon = Icons.Default.ThumbUp,
-                    title = "평점",
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
-                        Column {
-                            Text("교육 평점", fontSize = 12.sp, color = Color(0xFF757575))
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                "${adjuster.reviewScore?.toFixed1() ?: "-"} (${adjuster.reviewCount}건)",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
+        // 평점
+        item {
+            DetailCard(icon = Icons.Default.Star, title = "평점") {
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp), modifier = Modifier.fillMaxWidth()) {
+                    RatingItem(
+                        label = "교육 평점",
+                        score = adjuster.reviewScore?.toFixed1() ?: "-",
+                        count = adjuster.reviewCount,
+                        modifier = Modifier.weight(1f),
+                    )
+                    VerticalDivider(modifier = Modifier.height(56.dp))
+                    RatingItem(
+                        label = "보험금 상담 평점",
+                        score = adjuster.consultingReviewScore?.toFixed1() ?: "-",
+                        count = adjuster.consultingReviewCount,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+
+        // 보험금 상담 요청 내역
+        item {
+            DetailCard(
+                icon = Icons.AutoMirrored.Filled.List,
+                title = "보험금 상담 요청 내역",
+                badge = consultingItems.size,
+            ) {
+                when (consultingState) {
+                    is ConsultingRequestUiState.Loading ->
+                        LoadingBox()
+                    is ConsultingRequestUiState.Error ->
+                        ErrorText()
+                    else -> MiniRequestTable(
+                        headers = listOf("ID" to 0.5f, "요청자" to 1.5f, "분야" to 1.5f, "상태" to 1f, "접수일" to 1.5f),
+                        rows = consultingItems.map { item ->
+                            listOf(
+                                item.id.toString() to 0.5f,
+                                (item.requesterName ?: item.requesterNameSnapshot ?: "-") to 1.5f,
+                                (item.consultingField ?: "-") to 1.5f,
                             )
-                        }
-                        Column {
-                            Text("보험금 상담 평점", fontSize = 12.sp, color = Color(0xFF757575))
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                "${adjuster.consultingReviewScore?.toFixed1() ?: "-"} (${adjuster.consultingReviewCount}건)",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
+                        },
+                        statuses = consultingItems.map { it.status to 1f },
+                        lastCols = consultingItems.map { it.createdAt.take(10) to 1.5f },
+                        empty = consultingItems.isEmpty(),
+                    )
+                }
+            }
+        }
+
+        // 교육 요청 내역
+        item {
+            DetailCard(
+                icon = Icons.Default.DateRange,
+                title = "교육 요청 내역",
+                badge = educationItems.size,
+            ) {
+                when (educationState) {
+                    is EducationRequestUiState.Loading ->
+                        LoadingBox()
+                    is EducationRequestUiState.Error ->
+                        ErrorText()
+                    else -> MiniRequestTable(
+                        headers = listOf("ID" to 0.5f, "요청자" to 1.5f, "기관명" to 1.5f, "교육분야" to 1.5f, "상태" to 1f),
+                        rows = educationItems.map { item ->
+                            listOf(
+                                item.id.toString() to 0.5f,
+                                (item.requesterName ?: "-") to 1.5f,
+                                (item.orgName ?: "-") to 1.5f,
+                                (item.field ?: "-") to 1.5f,
                             )
-                        }
-                    }
-                }
-            }
-
-            // 보험금 상담 요청 내역
-            item {
-                DetailSectionCard(
-                    icon = Icons.AutoMirrored.Filled.List,
-                    title = "보험금 상담 요청 내역 (${consultingItems.size}건)",
-                ) {
-                    when (consultingState) {
-                        is ConsultingRequestUiState.Loading -> {
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                            }
-                        }
-                        is ConsultingRequestUiState.Error -> {
-                            Text("불러오기 실패", color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
-                        }
-                        else -> {
-                            if (consultingItems.isEmpty()) {
-                                Text("요청 내역이 없습니다.", fontSize = 14.sp, color = Color(0xFF757575))
-                            } else {
-                                Column {
-                                    // 헤더
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(Color(0xFFEEF2FF))
-                                            .padding(horizontal = 8.dp, vertical = 8.dp),
-                                    ) {
-                                        MiniCell("ID", weight = 0.5f, header = true)
-                                        MiniCell("요청자", weight = 1.5f, header = true)
-                                        MiniCell("분야", weight = 1.5f, header = true)
-                                        MiniCell("상태", weight = 1f, header = true)
-                                        MiniCell("접수일", weight = 1.5f, header = true)
-                                    }
-                                    HorizontalDivider()
-                                    consultingItems.forEach { item ->
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 8.dp, vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            MiniCell(item.id.toString(), weight = 0.5f)
-                                            MiniCell(item.requesterName ?: item.requesterNameSnapshot ?: "-", weight = 1.5f)
-                                            MiniCell(item.consultingField ?: "-", weight = 1.5f)
-                                            Box(modifier = Modifier.weight(1f)) {
-                                                StatusBadge(item.status)
-                                            }
-                                            MiniCell(item.createdAt.take(10), weight = 1.5f)
-                                        }
-                                        HorizontalDivider(thickness = 0.5.dp)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 교육 요청 내역
-            item {
-                DetailSectionCard(
-                    icon = Icons.Default.DateRange,
-                    title = "교육 요청 내역 (${educationItems.size}건)",
-                ) {
-                    when (educationState) {
-                        is EducationRequestUiState.Loading -> {
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                            }
-                        }
-                        is EducationRequestUiState.Error -> {
-                            Text("불러오기 실패", color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
-                        }
-                        else -> {
-                            if (educationItems.isEmpty()) {
-                                Text("요청 내역이 없습니다.", fontSize = 14.sp, color = Color(0xFF757575))
-                            } else {
-                                Column {
-                                    // 헤더
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(Color(0xFFEEF2FF))
-                                            .padding(horizontal = 8.dp, vertical = 8.dp),
-                                    ) {
-                                        MiniCell("ID", weight = 0.5f, header = true)
-                                        MiniCell("요청자", weight = 1.5f, header = true)
-                                        MiniCell("기관명", weight = 1.5f, header = true)
-                                        MiniCell("교육분야", weight = 1.5f, header = true)
-                                        MiniCell("상태", weight = 1f, header = true)
-                                    }
-                                    HorizontalDivider()
-                                    educationItems.forEach { item ->
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 8.dp, vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            MiniCell(item.id.toString(), weight = 0.5f)
-                                            MiniCell(item.requesterName ?: "-", weight = 1.5f)
-                                            MiniCell(item.orgName ?: "-", weight = 1.5f)
-                                            MiniCell(item.field ?: "-", weight = 1.5f)
-                                            Box(modifier = Modifier.weight(1f)) {
-                                                StatusBadge(item.status)
-                                            }
-                                        }
-                                        HorizontalDivider(thickness = 0.5.dp)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 리뷰 리스트 (준비 중)
-            item {
-                DetailSectionCard(
-                    icon = Icons.Default.Favorite,
-                    title = "리뷰",
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("리뷰 목록은 준비 중입니다.", fontSize = 14.sp, color = Color(0xFF757575))
-                    }
+                        },
+                        statuses = educationItems.map { it.status to 1f },
+                        lastCols = null,
+                        empty = educationItems.isEmpty(),
+                    )
                 }
             }
         }
     }
 }
 
+// ─── 공통 컴포넌트 ────────────────────────────────────────────────
+
 @Composable
-private fun DetailSectionCard(
+private fun DetailCard(
     icon: ImageVector,
     title: String,
+    badge: Int? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            // 카드 헤더
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color(0xFF5C6BC0))
-                Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Text(
+                    text = if (badge != null) "$title (${badge}건)" else title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            Spacer(Modifier.height(16.dp))
             content()
         }
     }
 }
 
 @Composable
-private fun BasicInfoGrid(adjuster: Adjuster) {
+private fun BasicInfoList(adjuster: Adjuster) {
     val items = listOf(
         "이름" to adjuster.name,
         "소속" to adjuster.company.ifBlank { "-" },
@@ -323,34 +238,30 @@ private fun BasicInfoGrid(adjuster: Adjuster) {
         "등록일" to adjuster.createdAt.take(10),
         "수정일" to adjuster.updatedAt.take(10),
     )
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items.chunked(2).forEach { pair ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                pair.forEach { (label, value) ->
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(label, fontSize = 12.sp, color = Color(0xFF757575), fontWeight = FontWeight.Medium)
-                        Spacer(Modifier.height(2.dp))
-                        Text(value, fontSize = 14.sp)
-                    }
-                }
-                if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChipRow(label: String, items: List<String>) {
-    if (items.isEmpty()) return
     Column {
-        Text(label, fontSize = 12.sp, color = Color(0xFF757575), fontWeight = FontWeight.Medium)
-        Spacer(Modifier.height(4.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            items.forEach { item ->
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(item, fontSize = 12.sp) },
+        items.forEachIndexed { index, (label, value) ->
+            if (index > 0) HorizontalDivider(
+                modifier = Modifier.padding(vertical = 0.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                thickness = 0.5.dp,
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = label,
+                    modifier = Modifier.width(88.dp),
+                    fontSize = 13.sp,
+                    color = AdminColors.Gray,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = value,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -358,12 +269,124 @@ private fun ChipRow(label: String, items: List<String>) {
 }
 
 @Composable
-private fun RowScope.MiniCell(text: String, weight: Float, header: Boolean = false) {
+private fun SectionLabel(text: String) {
     Text(
         text = text,
-        modifier = Modifier.weight(weight),
-        fontSize = if (header) 12.sp else 12.sp,
-        fontWeight = if (header) FontWeight.Bold else FontWeight.Normal,
-        color = if (header) Color(0xFF424242) else Color.Unspecified,
+        fontSize = 12.sp,
+        color = AdminColors.Gray,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.5.sp,
     )
+}
+
+@Composable
+private fun ChipSection(label: String, items: List<String>) {
+    if (items.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SectionLabel(label)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            items.forEach { item ->
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Text(
+                        text = item,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RatingItem(label: String, score: String, count: Int, modifier: Modifier) {
+    Column(
+        modifier = modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        SectionLabel(label)
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(score, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text("${count}건", fontSize = 13.sp, color = AdminColors.Gray, modifier = Modifier.padding(bottom = 3.dp))
+        }
+    }
+}
+
+@Composable
+private fun LoadingBox() {
+    Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+    }
+}
+
+@Composable
+private fun ErrorText() {
+    Text("불러오기 실패", color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+}
+
+@Composable
+private fun MiniRequestTable(
+    headers: List<Pair<String, Float>>,
+    rows: List<List<Pair<String, Float>>>,
+    statuses: List<Pair<String, Float>>,
+    lastCols: List<Pair<String, Float>>?,
+    empty: Boolean,
+) {
+    if (empty) {
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("내역이 없습니다.", fontSize = 14.sp, color = AdminColors.Gray)
+        }
+        return
+    }
+    Column {
+        // 헤더
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(6.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            headers.forEach { (text, w) ->
+                Text(
+                    text = text,
+                    modifier = Modifier.weight(w),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+        rows.forEachIndexed { i, cols ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(if (i % 2 == 1) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                cols.forEach { (text, w) ->
+                    Text(text, modifier = Modifier.weight(w), fontSize = 12.sp)
+                }
+                // status badge
+                Box(modifier = Modifier.weight(statuses[i].second)) {
+                    StatusBadge(statuses[i].first)
+                }
+                // optional last col
+                lastCols?.getOrNull(i)?.let { (text, w) ->
+                    Text(text, modifier = Modifier.weight(w), fontSize = 12.sp)
+                }
+            }
+        }
+    }
 }
