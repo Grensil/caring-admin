@@ -13,6 +13,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.tooling.preview.Preview
+import incar.mobile.caring.admin.theme.AdminTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -403,4 +405,49 @@ internal fun AdminSearchBar(
         modifier   = modifier.height(44.dp),
         textStyle  = LocalTextStyle.current.copy(fontSize = 14.sp),
     )
+}
+
+// ── Preview ──────────────────────────────────────────────────────────
+
+@Preview
+@Composable
+private fun AdminSearchBarEmptyPreview() {
+    AdminTheme {
+        Surface {
+            AdminSearchBar(
+                query         = "",
+                onQueryChange = {},
+                placeholder   = "이름, 연락처, 업체명으로 검색",
+                modifier      = Modifier.width(360.dp).padding(16.dp),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun AdminSearchBarFilledPreview() {
+    AdminTheme {
+        Surface {
+            AdminSearchBar(
+                query         = "엄지성",
+                onQueryChange = {},
+                placeholder   = "이름, 연락처, 업체명으로 검색",
+                modifier      = Modifier.width(360.dp).padding(16.dp),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun ColumnPickerDialogPreview() {
+    AdminTheme {
+        ColumnPickerDialog(
+            columns  = AdjusterColumn.entries.toList(),
+            visible  = setOf(AdjusterColumn.NAME, AdjusterColumn.COMPANY, AdjusterColumn.PHONE, AdjusterColumn.VISIBLE),
+            onDismiss = {},
+            onConfirm = { _, _ -> },
+        )
+    }
 }

@@ -88,6 +88,7 @@ kotlin {
                 implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
                 implementation("org.jetbrains.compose.ui:ui")
                 implementation("org.jetbrains.compose.components:components-resources:1.10.2")
+                implementation("org.jetbrains.compose.ui:ui-tooling-preview:1.10.2")
                 api(libs.koin.core)
                 implementation(libs.koin.compose)
                 implementation(libs.koin.compose.viewmodel)
