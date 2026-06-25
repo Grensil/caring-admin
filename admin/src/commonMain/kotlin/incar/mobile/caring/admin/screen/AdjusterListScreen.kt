@@ -2,6 +2,7 @@ package incar.mobile.caring.admin.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,16 +14,20 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.tooling.preview.Preview
-import incar.mobile.caring.admin.theme.AdminTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.tooling.preview.Preview
 import incar.mobile.caring.admin.model.Adjuster
 import incar.mobile.caring.admin.storage.AdminStorage
+import incar.mobile.caring.admin.theme.AdminTheme
 import incar.mobile.caring.admin.viewmodel.AdjusterListUiState
 import incar.mobile.caring.admin.viewmodel.AdjusterListViewModel
 import kotlinx.coroutines.launch
@@ -71,22 +76,21 @@ fun AdjusterListScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var editingAdjuster  by remember { mutableStateOf<Adjuster?>(null) }
-    var isSaving         by remember { mutableStateOf(false) }
-    var query            by remember { mutableStateOf("") }
-    var showColPicker    by remember { mutableStateOf(false) }
-    var columnOrder      by remember { mutableStateOf(loadColOrder(storage)) }
-    var visibleColumns   by remember { mutableStateOf(loadColVisible(storage)) }
+    var editingAdjuster by remember { mutableStateOf<Adjuster?>(null) }
+    var isSaving        by remember { mutableStateOf(false) }
+    var query           by remember { mutableStateOf("") }
+    var columnOrder     by remember { mutableStateOf(loadColOrder(storage)) }
+    var visibleColumns  by remember { mutableStateOf(loadColVisible(storage)) }
 
-    LaunchedEffect(Unit) { viewModel.load(token) }
-    LaunchedEffect(columnOrder)    { storage.save(KEY_COL_ORDER, columnOrder.joinToString(",") { it.name }) }
+    LaunchedEffect(Unit)           { viewModel.load(token) }
+    LaunchedEffect(columnOrder)    { storage.save(KEY_COL_ORDER,   columnOrder.joinToString(",") { it.name }) }
     LaunchedEffect(visibleColumns) { storage.save(KEY_COL_VISIBLE, visibleColumns.joinToString(",") { it.name }) }
 
     if (editingAdjuster != null) {
         AdjusterEditDialog(
-            adjuster = editingAdjuster!!,
-            isSaving = isSaving,
-            onSave = { fields ->
+            adjuster  = editingAdjuster!!,
+            isSaving  = isSaving,
+            onSave    = { fields ->
                 isSaving = true
                 viewModel.update(
                     token     = token,
@@ -97,15 +101,6 @@ fun AdjusterListScreen(
                 )
             },
             onDismiss = { if (!isSaving) editingAdjuster = null },
-        )
-    }
-
-    if (showColPicker) {
-        ColumnPickerDialog(
-            columns  = columnOrder,
-            visible  = visibleColumns,
-            onDismiss = { showColPicker = false },
-            onConfirm = { order, vis -> columnOrder = order; visibleColumns = vis; showColPicker = false },
         )
     }
 
@@ -130,27 +125,16 @@ fun AdjusterListScreen(
                     modifier      = Modifier.widthIn(min = 200.dp, max = 400.dp),
                 )
                 Spacer(Modifier.weight(1f))
-                OutlinedButton(
-                    onClick = { showColPicker = true },
-                    modifier = Modifier.height(40.dp),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Icon(Icons.Default.ViewColumn, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("컬럼", fontSize = 13.sp)
-                }
                 IconButton(onClick = { viewModel.refresh(token) }, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                 }
             }
 
             // ── 건수 ──
-            val filteredForCount = filterAdjusters(
-                (uiState as? AdjusterListUiState.Success)?.adjusters ?: emptyList(), query
-            )
             if (uiState is AdjusterListUiState.Success) {
+                val cnt = filterAdjusters((uiState as AdjusterListUiState.Success).adjusters, query).size
                 Text(
-                    text     = "총 ${filteredForCount.size}명",
+                    text     = "총 ${cnt}명",
                     modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 8.dp),
                     style    = MaterialTheme.typography.bodyMedium,
                     color    = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -178,11 +162,13 @@ fun AdjusterListScreen(
                         }
                     } else {
                         AdjusterTable(
-                            adjusters      = filtered,
-                            columnOrder    = columnOrder,
-                            visibleColumns = visibleColumns,
-                            onEdit         = { editingAdjuster = it },
-                            onRowClick     = onAdjusterSelect,
+                            adjusters             = filtered,
+                            columnOrder           = columnOrder,
+                            visibleColumns        = visibleColumns,
+                            onColumnOrderChange   = { columnOrder = it },
+                            onVisibleColumnsChange = { visibleColumns = it },
+                            onEdit                = { editingAdjuster = it },
+                            onRowClick            = onAdjusterSelect,
                         )
                     }
                 }
@@ -199,108 +185,178 @@ private fun filterAdjusters(adjusters: List<Adjuster>, query: String): List<Adju
         it.company.contains(query, ignoreCase = true)
     }
 
-// ── 컬럼 피커 다이얼로그 ──────────────────────────────────────────────
-
-@Composable
-private fun ColumnPickerDialog(
-    columns: List<AdjusterColumn>,
-    visible: Set<AdjusterColumn>,
-    onDismiss: () -> Unit,
-    onConfirm: (List<AdjusterColumn>, Set<AdjusterColumn>) -> Unit,
-) {
-    var localOrder   by remember { mutableStateOf(columns) }
-    var localVisible by remember { mutableStateOf(visible) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("표시 컬럼 설정", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    "표시할 컬럼을 선택하고 순서를 조정하세요.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(8.dp))
-                localOrder.forEachIndexed { idx, col ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(
-                            checked = col in localVisible,
-                            onCheckedChange = { checked ->
-                                localVisible = if (checked) localVisible + col else localVisible - col
-                            },
-                        )
-                        Text(col.label, modifier = Modifier.weight(1f), fontSize = 14.sp)
-                        IconButton(
-                            onClick = {
-                                if (idx > 0) localOrder = localOrder.toMutableList().also {
-                                    val t = it[idx]; it[idx] = it[idx - 1]; it[idx - 1] = t
-                                }
-                            },
-                            modifier = Modifier.size(28.dp),
-                            enabled  = idx > 0,
-                        ) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "위로", modifier = Modifier.size(16.dp))
-                        }
-                        IconButton(
-                            onClick = {
-                                if (idx < localOrder.lastIndex) localOrder = localOrder.toMutableList().also {
-                                    val t = it[idx]; it[idx] = it[idx + 1]; it[idx + 1] = t
-                                }
-                            },
-                            modifier = Modifier.size(28.dp),
-                            enabled  = idx < localOrder.lastIndex,
-                        ) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "아래로", modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { Button(onClick = { onConfirm(localOrder, localVisible) }) { Text("확인") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
-    )
-}
-
-// ── 테이블 (가로 스크롤) ─────────────────────────────────────────────
+// ── 테이블 ──────────────────────────────────────────────────────────
 
 @Composable
 private fun AdjusterTable(
     adjusters: List<Adjuster>,
     columnOrder: List<AdjusterColumn>,
     visibleColumns: Set<AdjusterColumn>,
+    onColumnOrderChange: (List<AdjusterColumn>) -> Unit,
+    onVisibleColumnsChange: (Set<AdjusterColumn>) -> Unit,
     onEdit: (Adjuster) -> Unit,
     onRowClick: (Adjuster) -> Unit,
 ) {
     val visibleCols = columnOrder.filter { it in visibleColumns }
     val hScroll     = rememberScrollState()
     val editW       = 80.dp
+    val density     = LocalDensity.current
+
+    // 드래그 상태
+    var draggingCol  by remember { mutableStateOf<AdjusterColumn?>(null) }
+    var dragOffsetX  by remember { mutableStateOf(0f) }
+
+    // 필터 드롭다운
+    var showFilter by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        // 헤더
+
+        // ── 헤더 ────────────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(hScroll)
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             visibleCols.forEach { col ->
-                Text(
-                    text       = col.label,
-                    modifier   = Modifier.width(col.width),
-                    fontSize   = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color      = MaterialTheme.colorScheme.primary,
-                )
+                key(col) {
+                    val isDragging = draggingCol == col
+
+                    Box(
+                        modifier = Modifier
+                            .width(col.width)
+                            .zIndex(if (isDragging) 2f else 1f)
+                            .graphicsLayer { translationX = if (isDragging) dragOffsetX else 0f }
+                            .then(
+                                if (isDragging)
+                                    Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                else Modifier
+                            )
+                            .pointerInput(col) {
+                                detectDragGestures(
+                                    onDragStart = {
+                                        draggingCol = col
+                                        dragOffsetX = 0f
+                                    },
+                                    onDragEnd = {
+                                        draggingCol = null
+                                        dragOffsetX = 0f
+                                    },
+                                    onDragCancel = {
+                                        draggingCol = null
+                                        dragOffsetX = 0f
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        dragOffsetX += dragAmount.x
+
+                                        val current = draggingCol ?: return@detectDragGestures
+                                        val currentIdx = columnOrder.indexOf(current)
+                                        if (currentIdx < 0) return@detectDragGestures
+
+                                        val halfW = with(density) { current.width.toPx() / 2f }
+
+                                        if (dragOffsetX > halfW && currentIdx < columnOrder.lastIndex) {
+                                            val nextIdx = currentIdx + 1
+                                            val nextW = with(density) { columnOrder[nextIdx].width.toPx() }
+                                            onColumnOrderChange(columnOrder.toMutableList().also {
+                                                val t = it[currentIdx]; it[currentIdx] = it[nextIdx]; it[nextIdx] = t
+                                            })
+                                            dragOffsetX -= nextW
+                                        } else if (dragOffsetX < -halfW && currentIdx > 0) {
+                                            val prevIdx = currentIdx - 1
+                                            val prevW = with(density) { columnOrder[prevIdx].width.toPx() }
+                                            onColumnOrderChange(columnOrder.toMutableList().also {
+                                                val t = it[currentIdx]; it[currentIdx] = it[prevIdx]; it[prevIdx] = t
+                                            })
+                                            dragOffsetX += prevW
+                                        }
+                                    },
+                                )
+                            }
+                            .padding(start = 8.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.DragIndicator,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text       = col.label,
+                                fontSize   = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color      = MaterialTheme.colorScheme.primary,
+                                maxLines   = 1,
+                                overflow   = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
             }
+
+            // 편집 컬럼 자리 확보
             Spacer(Modifier.width(editW))
+
+            // ── 필터 버튼 ──
+            Box {
+                IconButton(
+                    onClick  = { showFilter = !showFilter },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        if (visibleCols.size < AdjusterColumn.entries.size)
+                            Icons.Default.FilterListOff else Icons.Default.FilterList,
+                        contentDescription = "컬럼 필터",
+                        tint     = if (visibleCols.size < AdjusterColumn.entries.size)
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                DropdownMenu(
+                    expanded          = showFilter,
+                    onDismissRequest  = { showFilter = false },
+                ) {
+                    Text(
+                        "표시 컬럼",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style    = MaterialTheme.typography.labelMedium,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    HorizontalDivider()
+                    columnOrder.forEach { col ->
+                        val checked = col in visibleColumns
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Checkbox(
+                                        checked         = checked,
+                                        onCheckedChange = null,
+                                        modifier        = Modifier.size(20.dp),
+                                    )
+                                    Text(col.label, fontSize = 13.sp)
+                                }
+                            },
+                            onClick = {
+                                onVisibleColumnsChange(
+                                    if (checked) visibleColumns - col else visibleColumns + col
+                                )
+                            },
+                        )
+                    }
+                }
+            }
         }
+
         HorizontalDivider()
 
+        // ── 데이터 행 ─────────────────────────────────────────────────
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(adjusters) { adjuster ->
                 Row(
@@ -308,7 +364,7 @@ private fun AdjusterTable(
                         .fillMaxWidth()
                         .horizontalScroll(hScroll)
                         .clickable { onRowClick(adjuster) }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     visibleCols.forEach { col ->
@@ -325,7 +381,7 @@ private fun AdjusterTable(
                             }
                             else -> Text(
                                 text     = adjuster.cellValue(col),
-                                modifier = Modifier.width(col.width),
+                                modifier = Modifier.width(col.width).padding(horizontal = 4.dp),
                                 fontSize = 14.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -333,10 +389,10 @@ private fun AdjusterTable(
                         }
                     }
                     OutlinedButton(
-                        onClick         = { onEdit(adjuster) },
-                        modifier        = Modifier.width(editW).height(32.dp),
-                        contentPadding  = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                        shape           = RoundedCornerShape(6.dp),
+                        onClick        = { onEdit(adjuster) },
+                        modifier       = Modifier.width(editW).height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        shape          = RoundedCornerShape(6.dp),
                     ) {
                         Text("편집", style = MaterialTheme.typography.labelMedium)
                     }
@@ -383,8 +439,8 @@ internal fun AdminSearchBar(
                 color    = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
-        singleLine  = true,
-        leadingIcon = {
+        singleLine   = true,
+        leadingIcon  = {
             Icon(
                 Icons.Default.Search,
                 contentDescription = null,
@@ -402,8 +458,8 @@ internal fun AdminSearchBar(
             focusedBorderColor   = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
-        modifier   = modifier.height(44.dp),
-        textStyle  = LocalTextStyle.current.copy(fontSize = 14.sp),
+        modifier  = modifier.height(44.dp),
+        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
     )
 }
 
@@ -436,18 +492,5 @@ private fun AdminSearchBarFilledPreview() {
                 modifier      = Modifier.width(360.dp).padding(16.dp),
             )
         }
-    }
-}
-
-@Preview
-@Composable
-private fun ColumnPickerDialogPreview() {
-    AdminTheme {
-        ColumnPickerDialog(
-            columns  = AdjusterColumn.entries.toList(),
-            visible  = setOf(AdjusterColumn.NAME, AdjusterColumn.COMPANY, AdjusterColumn.PHONE, AdjusterColumn.VISIBLE),
-            onDismiss = {},
-            onConfirm = { _, _ -> },
-        )
     }
 }
