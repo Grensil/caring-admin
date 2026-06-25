@@ -1,0 +1,32 @@
+name: Build Windows MSI
+
+on:
+  workflow_dispatch:   # 수동 실행
+  push:
+    tags:
+      - 'v*'           # v1.0.0 태그 push 시 자동 실행
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build MSI
+        run: ./gradlew :desktopApp:packageMsi
+
+      - name: Upload MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: Caring-Admin-Windows
+          path: desktopApp/build/compose/binaries/main/msi/*.msi
