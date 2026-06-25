@@ -32,6 +32,72 @@ import kotlin.math.roundToInt
 import org.koin.compose.koinInject
 
 @Composable
+private fun HomeScreen(
+    menuOrder: List<AdminMenu>,
+    onMenuSelect: (AdminMenu) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA))
+            .verticalScroll(rememberScrollState())
+            .padding(32.dp),
+    ) {
+        Text(text = "전체 메뉴", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(text = "관리할 항목을 선택하세요", color = Color(0xFF6C7086), fontSize = 13.sp)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        val cols = 3
+        menuOrder.chunked(cols).forEach { rowItems ->
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                rowItems.forEach { menu ->
+                    Card(
+                        modifier  = Modifier.weight(1f).clickable { onMenuSelect(menu) },
+                        colors    = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        shape     = MaterialTheme.shapes.medium,
+                    ) {
+                        Row(
+                            modifier          = Modifier.padding(20.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier         = Modifier
+                                    .size(36.dp)
+                                    .background(Color(0xFFE8F0FE), shape = MaterialTheme.shapes.small),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector        = menuIcons[menu] ?: Icons.Default.Circle,
+                                    contentDescription = null,
+                                    tint               = Color(0xFF4A6CF7),
+                                    modifier           = Modifier.size(20.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = menu.label, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                                if (menu.children.isNotEmpty()) {
+                                    Text(text = "${menu.children.size}개 항목", color = Color(0xFF6C7086), fontSize = 12.sp)
+                                }
+                            }
+                            Icon(
+                                imageVector        = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint               = Color(0xFFBAC2DE),
+                                modifier           = Modifier.size(16.dp),
+                            )
+                        }
+                    }
+                }
+                repeat(cols - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
 private fun SubMenuGridScreen(
     menu: incar.mobile.caring.admin.AdminMenu,
     icon: ImageVector?,
@@ -509,23 +575,47 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
 
         // ── 콘텐츠 영역 ───────────────────────────────────
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            val headerTitle = selectedSubMenu?.label ?: selectedMenu?.label ?: ""
-            if (headerTitle.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White)
-                        .padding(horizontal = 28.dp, vertical = 16.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
+            // 브레드크럼
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(horizontal = 28.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // 홈
+                Text(
+                    text       = "홈",
+                    style      = MaterialTheme.typography.titleLarge,
+                    fontWeight = if (selectedMenu == null) FontWeight.Bold else FontWeight.Normal,
+                    color      = if (selectedMenu == null) Color(0xFF1A1A2E) else Color(0xFF6C7086),
+                    modifier   = if (selectedMenu != null) Modifier.clickable {
+                        selectedMenu    = null
+                        selectedSubMenu = null
+                        expandedMenu    = null
+                    } else Modifier,
+                )
+                if (selectedMenu != null) {
+                    Text("  >  ", color = Color(0xFF6C7086), fontSize = 18.sp)
                     Text(
-                        text       = headerTitle,
+                        text       = selectedMenu!!.label,
                         style      = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = if (selectedSubMenu == null) FontWeight.Bold else FontWeight.Normal,
+                        color      = if (selectedSubMenu == null) Color(0xFF1A1A2E) else Color(0xFF6C7086),
+                        modifier   = if (selectedSubMenu != null) Modifier.clickable { selectedSubMenu = null } else Modifier,
                     )
                 }
-                HorizontalDivider()
+                if (selectedSubMenu != null) {
+                    Text("  >  ", color = Color(0xFF6C7086), fontSize = 18.sp)
+                    Text(
+                        text       = selectedSubMenu!!.label,
+                        style      = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color      = Color(0xFF1A1A2E),
+                    )
+                }
             }
+            HorizontalDivider()
 
             when (selectedSubMenu) {
                 AdminSubMenu.ADJUSTER_LIST       -> AdjusterListScreen(token = token, onLogout = {})
@@ -534,15 +624,18 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
                 null -> {
                     val menu = selectedMenu
                     when {
-                        menu == null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("메뉴를 선택하세요", color = Color(0xFF6C7086))
-                        }
+                        menu == null -> HomeScreen(
+                            menuOrder    = menuOrder,
+                            onMenuSelect = { selected ->
+                                selectedMenu    = selected
+                                selectedSubMenu = null
+                                expandedMenu    = selected
+                            },
+                        )
                         menu.children.isNotEmpty() -> SubMenuGridScreen(
                             menu     = menu,
                             icon     = menuIcons[menu],
-                            onSelect = { sub ->
-                                selectedSubMenu = sub
-                            },
+                            onSelect = { sub -> selectedSubMenu = sub },
                         )
                         else -> PlaceholderScreen()
                     }
